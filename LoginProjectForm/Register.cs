@@ -7,20 +7,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using LoginProjectForm.Models;
 using MongoDB.Driver;
 using System.Security.Cryptography;
 using System.IO;
+using MongoDB.Bson;
 
 namespace LoginProjectForm
 {
-    public partial class Form1 : Form
+    public partial class Register : Form
     {
         private IMongoClient client = new MongoClient(
             "mongodb+srv://admin-net:admin-net@cluster0.zxlfk2g.mongodb.net/?retryWrites=true&w=majority"
         );
 
-        public Form1()
+        public Register()
         {
             InitializeComponent();
         }
@@ -71,30 +71,45 @@ namespace LoginProjectForm
             return clearText;
         }
 
-        private void btn_IniciarSesion_Click(object sender, EventArgs e)
+        private void btn_RegresarLogin_Click(object sender, EventArgs e)
         {
-            var database = client.GetDatabase("Database");
-            var collection = database.GetCollection<Usuario>("usuarios");
-            var filter = Builders<Usuario>.Filter.Eq("username", txt_Usuario.Text);
-            var result = collection.Find(filter).ToList();
-            // EL USUARIO ES "Saltos" (SIN COMILLAS)
-            // LA CONTRASEÑA ES "password" (SIN COMILLAS)
-            if (result.Count > 0)
+            this.Hide();
+            Login login = new Login();
+            login.Show();
+        }
+
+        private void btn_Registrarse_Click(object sender, EventArgs e)
+        {
+            if (txt_Password.Text == txt_RepPassword.Text)
             {
-                if (result[0].Password == Encrypt(txt_Password.Text))
+                IMongoDatabase db = client.GetDatabase("Database");
+                IMongoCollection<BsonDocument> collection = db.GetCollection<BsonDocument>(
+                    "usuarios"
+                );
+                var filter = Builders<BsonDocument>.Filter.Eq("username", txt_Usuario.Text);
+                var result = collection.Find(filter).ToList();
+                if (result.Count == 0)
                 {
-                    MessageBox.Show("Bienvenido " + result[0].Name + " :)");
-                    lbl_ErrorContraseña.Text = "";
+                    BsonDocument document = new BsonDocument
+                    {
+                        { "name", txt_Nombre.Text },
+                        { "username", txt_Usuario.Text },
+                        { "password", Encrypt(txt_Password.Text) },
+                    };
+                    collection.InsertOne(document);
+                    MessageBox.Show("Usuario registrado exitosamente");
+                    this.Hide();
+                    Login login = new Login();
+                    login.Show();
                 }
                 else
                 {
-                    lbl_ErrorContraseña.Text = "Contraseña incorrecta";
+                    MessageBox.Show("El usuario ya existe");
                 }
-                lbl_ErrorUsuario.Text = "";
             }
             else
             {
-                lbl_ErrorUsuario.Text = "Usuario no encontrado";
+                MessageBox.Show("Las contraseñas no coinciden");
             }
         }
     }
